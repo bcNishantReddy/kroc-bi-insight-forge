@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      bundles: {
+        Row: {
+          columns_info: Json | null
+          created_at: string
+          file_name: string
+          file_size: number | null
+          file_url: string | null
+          id: string
+          name: string
+          summary_stats: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          columns_info?: Json | null
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          name: string
+          summary_stats?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          columns_info?: Json | null
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          name?: string
+          summary_stats?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          bundle_id: string
+          created_at: string
+          id: string
+          message: string
+          response: string
+          user_id: string
+        }
+        Insert: {
+          bundle_id: string
+          created_at?: string
+          id?: string
+          message: string
+          response: string
+          user_id: string
+        }
+        Update: {
+          bundle_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          response?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "bundles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patents: {
         Row: {
           advancements: string
