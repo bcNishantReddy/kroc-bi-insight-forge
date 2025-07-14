@@ -14,7 +14,7 @@ export default function DataVisualization({ bundle, csvData }: DataVisualization
   const [chartType, setChartType] = useState<string>('bar');
   const [xAxis, setXAxis] = useState<string>('');
   const [yAxis, setYAxis] = useState<string>('');
-  const [colorBy, setColorBy] = useState<string>('');
+  const [colorBy, setColorBy] = useState<string>('none');
 
   const getColumns = () => {
     if (!csvData.length) return [];
@@ -76,7 +76,7 @@ export default function DataVisualization({ bundle, csvData }: DataVisualization
       const item: any = {};
       if (xAxis) item[xAxis] = isNaN(Number(row[xAxis])) ? row[xAxis] : Number(row[xAxis]);
       if (yAxis) item[yAxis] = isNaN(Number(row[yAxis])) ? row[yAxis] : Number(row[yAxis]);
-      if (colorBy) item[colorBy] = row[colorBy];
+      if (colorBy && colorBy !== 'none') item[colorBy] = row[colorBy];
       return item;
     }).filter(item => item[xAxis] !== undefined && (!yAxis || item[yAxis] !== undefined));
   };
@@ -249,7 +249,7 @@ export default function DataVisualization({ bundle, csvData }: DataVisualization
                     <SelectValue placeholder="Select color grouping" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {categoricalColumns.map(col => (
                       <SelectItem key={col} value={col}>{col}</SelectItem>
                     ))}
