@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, Trash2 } from "lucide-react";
+import { Send, Bot, User, Trash2, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { validateChatMessage } from "@/utils/validation";
 
 interface AIChatProps {
   bundle: any;
@@ -26,6 +27,7 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
   const [currentMessage, setCurrentMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [messageError, setMessageError] = useState("");
   const { user } = useAuth();
 
   useEffect(() => {
@@ -43,6 +45,7 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
       if (error) throw error;
       setMessages(data || []);
     } catch (error) {
+      console.error("Error fetching chat history:", error);
       toast.error("Error fetching chat history");
     } finally {
       setLoadingHistory(false);
@@ -60,36 +63,75 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
       setMessages([]);
       toast.success("Chat history cleared");
     } catch (error) {
+      console.error("Error clearing chat history:", error);
       toast.error("Error clearing chat history");
     }
+  };
+
+  const prepareSecureDataSample = (data: any[]): any[] => {
+    // Limit to first 50 rows for security
+    const limitedData = data.slice(0, 50);
+    
+    // Remove potentially sensitive columns (those that might contain PII)
+    const sensitivePatterns = /^(email|phone|ssn|social|address|name|id|password|key|token)$/i;
+    
+    return limitedData.map(row => {
+      const sanitizedRow: any = {};
+      Object.keys(row).forEach(key => {
+        if (!sensitivePatterns.test(key)) {
+          sanitizedRow[key] = row[key];
+        } else {
+          sanitizedRow[key] = "[REDACTED]";
+        }
+      });
+      return sanitizedRow;
+    });
   };
 
   const sendMessage = async () => {
     if (!currentMessage.trim() || loading) return;
 
+    // Validate message
+    const messageValidation = validateChatMessage(currentMessage);
+    if (!messageValidation.isValid) {
+      setMessageError(messageValidation.error || "Invalid message");
+      return;
+    }
+
     const userMessage = currentMessage.trim();
     setCurrentMessage("");
+    setMessageError("");
     setLoading(true);
 
     try {
+      // Prepare secure data sample
+      const secureDataSample = prepareSecureDataSample(csvData);
+      
       // Call edge function for AI response
       const { data, error } = await supabase.functions.invoke('gemini-chat', {
         body: {
           message: userMessage,
-          csvData: csvData.slice(0, 100), // Send sample data to avoid token limits
+          csvData: secureDataSample, // Send only sanitized sample
           bundleInfo: {
             name: bundle.name,
             totalRows: csvData.length,
-            columns: Object.keys(csvData[0] || {})
+            columns: Object.keys(csvData[0] || {}).map(col => {
+              // Redact potentially sensitive column names
+              const sensitivePatterns = /^(email|phone|ssn|social|address|name|id|password|key|token)$/i;
+              return sensitivePatterns.test(col) ? "[SENSITIVE_COLUMN]" : col;
+            })
           }
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("AI chat error:", error);
+        throw new Error("Failed to get AI response. Please try again.");
+      }
 
       const aiResponse = data.response;
 
-      // Save to database
+      // Save to database with sanitized inputs
       const { data: savedMessage, error: saveError } = await supabase
         .from("chat_messages")
         .insert({
@@ -101,10 +143,14 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
         .select()
         .single();
 
-      if (saveError) throw saveError;
+      if (saveError) {
+        console.error("Save message error:", saveError);
+        throw new Error("Failed to save message");
+      }
 
       setMessages(prev => [...prev, savedMessage]);
     } catch (error: any) {
+      console.error("Chat error:", error);
       toast.error(error.message || "Error sending message");
     } finally {
       setLoading(false);
@@ -136,6 +182,19 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
 
   return (
     <div className="space-y-6">
+      {/* Security Notice */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="pt-4">
+          <div className="flex items-center space-x-2 text-blue-700">
+            <Shield className="h-4 w-4" />
+            <p className="text-sm">
+              <strong>Privacy Protected:</strong> Only a sample of your data (50 rows) is sent to AI, 
+              with sensitive columns automatically redacted for your security.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -204,18 +263,29 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="flex space-x-2">
-              <Input
-                placeholder="Ask a question about your data..."
-                value={currentMessage}
-                onChange={(e) => setCurrentMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                disabled={loading}
-                className="flex-1"
-              />
-              <Button onClick={sendMessage} disabled={loading || !currentMessage.trim()}>
-                <Send className="h-4 w-4" />
-              </Button>
+            <div className="space-y-2">
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Ask a question about your data..."
+                  value={currentMessage}
+                  onChange={(e) => {
+                    setCurrentMessage(e.target.value);
+                    setMessageError("");
+                  }}
+                  onKeyPress={handleKeyPress}
+                  disabled={loading}
+                  className={`flex-1 ${messageError ? "border-red-500" : ""}`}
+                />
+                <Button 
+                  onClick={sendMessage} 
+                  disabled={loading || !currentMessage.trim()}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+              {messageError && (
+                <p className="text-red-500 text-xs">{messageError}</p>
+              )}
             </div>
           </div>
         </CardContent>
