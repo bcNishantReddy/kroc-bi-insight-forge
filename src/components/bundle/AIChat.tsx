@@ -68,25 +68,6 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
     }
   };
 
-  const prepareSecureDataSample = (data: any[]): any[] => {
-    // Limit to first 50 rows for security
-    const limitedData = data.slice(0, 50);
-    
-    // Remove potentially sensitive columns (those that might contain PII)
-    const sensitivePatterns = /^(email|phone|ssn|social|address|name|id|password|key|token)$/i;
-    
-    return limitedData.map(row => {
-      const sanitizedRow: any = {};
-      Object.keys(row).forEach(key => {
-        if (!sensitivePatterns.test(key)) {
-          sanitizedRow[key] = row[key];
-        } else {
-          sanitizedRow[key] = "[REDACTED]";
-        }
-      });
-      return sanitizedRow;
-    });
-  };
 
   const sendMessage = async () => {
     if (!currentMessage.trim() || loading) return;
@@ -104,22 +85,15 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
     setLoading(true);
 
     try {
-      // Prepare secure data sample
-      const secureDataSample = prepareSecureDataSample(csvData);
-      
       // Call edge function for AI response
       const { data, error } = await supabase.functions.invoke('gemini-chat', {
         body: {
           message: userMessage,
-          csvData: secureDataSample, // Send only sanitized sample
+          csvData: csvData, // Send full dataset
           bundleInfo: {
             name: bundle.name,
             totalRows: csvData.length,
-            columns: Object.keys(csvData[0] || {}).map(col => {
-              // Redact potentially sensitive column names
-              const sensitivePatterns = /^(email|phone|ssn|social|address|name|id|password|key|token)$/i;
-              return sensitivePatterns.test(col) ? "[SENSITIVE_COLUMN]" : col;
-            })
+            columns: Object.keys(csvData[0] || {})
           }
         }
       });
@@ -182,18 +156,6 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
 
   return (
     <div className="space-y-6">
-      {/* Security Notice */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="pt-4">
-          <div className="flex items-center space-x-2 text-blue-700">
-            <Shield className="h-4 w-4" />
-            <p className="text-sm">
-              <strong>Privacy Protected:</strong> Only a sample of your data (50 rows) is sent to AI, 
-              with sensitive columns automatically redacted for your security.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
