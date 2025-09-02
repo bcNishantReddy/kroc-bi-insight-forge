@@ -178,7 +178,7 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
         <CardContent>
           <div className="space-y-4">
             {/* Chat Messages */}
-            <ScrollArea className="h-96 border rounded-lg p-4 bg-amber-50/50">
+            <ScrollArea className={`transition-all duration-500 ease-out border rounded-lg p-4 bg-amber-50/50 ${loading ? 'h-[28rem]' : 'h-96'}`}>
               {messages.length === 0 ? (
                 <div className="text-center text-amber-600 py-8">
                   <Bot className="mx-auto h-12 w-12 mb-4 opacity-50" />
@@ -186,7 +186,7 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
                   <p className="text-sm mt-2">Try asking about statistics, trends, or patterns.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 transition-all duration-300">
                   {messages.map((msg) => (
                     <div key={msg.id} className="space-y-3">
                       {/* User Message */}
@@ -212,19 +212,20 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
                   ))}
                   
                   {loading && (
-                    <div className="flex items-start space-x-3 animate-fade-in">
-                      <div className="bg-amber-100 rounded-full p-2 relative">
+                    <div className="flex items-start space-x-3 animate-fade-in transform transition-all duration-500 ease-out">
+                      <div className="bg-amber-100 rounded-full p-2 relative animate-pulse">
                         <Bot className="h-4 w-4 text-amber-600" />
                         <div className="absolute -top-1 -right-1">
-                          <Sparkles className="h-3 w-3 text-amber-500 animate-pulse" />
+                          <Sparkles className="h-3 w-3 text-amber-500 animate-spin" />
                         </div>
                       </div>
-                      <div className="bg-amber-50 rounded-lg p-3 shadow-sm border border-amber-200/50 animate-scale-in">
+                      <div className="bg-amber-50 rounded-lg p-4 shadow-lg border border-amber-200/50 animate-scale-in min-h-[80px] flex-1 transition-all duration-500">
                         <TypingIndicator className="text-amber-600" />
-                        <div className="mt-2 space-y-1">
-                          <div className="w-32 h-2 bg-amber-200/50 rounded animate-pulse" />
-                          <div className="w-24 h-2 bg-amber-200/30 rounded animate-pulse" style={{ animationDelay: '200ms' }} />
-                          <div className="w-28 h-2 bg-amber-200/40 rounded animate-pulse" style={{ animationDelay: '400ms' }} />
+                        <div className="mt-3 space-y-2">
+                          <div className="w-full h-2 bg-amber-200/50 rounded animate-pulse" />
+                          <div className="w-3/4 h-2 bg-amber-200/30 rounded animate-pulse" style={{ animationDelay: '200ms' }} />
+                          <div className="w-5/6 h-2 bg-amber-200/40 rounded animate-pulse" style={{ animationDelay: '400ms' }} />
+                          <div className="w-2/3 h-2 bg-amber-200/35 rounded animate-pulse" style={{ animationDelay: '600ms' }} />
                         </div>
                       </div>
                     </div>
