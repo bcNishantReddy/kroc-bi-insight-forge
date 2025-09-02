@@ -85,18 +85,23 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
     setLoading(true);
 
     try {
-      // Call edge function for AI response
-      const { data, error } = await supabase.functions.invoke('gemini-chat', {
-        body: {
-          message: userMessage,
-          csvData: csvData, // Send full dataset
-          bundleInfo: {
-            name: bundle.name,
-            totalRows: csvData.length,
-            columns: Object.keys(csvData[0] || {})
+      // Call edge function for AI response with timeout
+      const { data, error } = await Promise.race([
+        supabase.functions.invoke('gemini-chat', {
+          body: {
+            message: userMessage,
+            csvData: csvData.slice(0, 100), // Limit data size for faster processing
+            bundleInfo: {
+              name: bundle.name,
+              totalRows: csvData.length,
+              columns: Object.keys(csvData[0] || {})
+            }
           }
-        }
-      });
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout - please try again')), 30000)
+        )
+      ]) as any;
 
       if (error) {
         console.error("AI chat error:", error);
