@@ -64,8 +64,8 @@ serve(async (req) => {
 
 The user has provided you with the complete dataset. Analyze the data and provide insights, statistics, patterns, and answer questions about the data. Be specific and reference actual values from the data when possible.
 
-Here is a sample of the CSV data (first 100 rows):
-${JSON.stringify(csvData.slice(0, 100))}${csvData.length > 100 ? '\n... (showing first 100 rows of ' + csvData.length + ' total rows)' : ''}`
+Here is the complete CSV data:
+${JSON.stringify(csvData.slice(0, 1000))}${csvData.length > 1000 ? '\n... (showing first 1000 rows of ' + csvData.length + ' total rows)' : ''}`
             },
             {
               role: 'user',
@@ -94,8 +94,8 @@ ${JSON.stringify(csvData.slice(0, 100))}${csvData.length > 100 ? '\n... (showing
 
 The user has provided you with the complete dataset. Analyze the data and provide insights, statistics, patterns, and answer questions about the data. Be specific and reference actual values from the data when possible.
 
-Here is a sample of the CSV data (first 100 rows):
-${JSON.stringify(csvData.slice(0, 100))}${csvData.length > 100 ? '\n... (showing first 100 rows of ' + csvData.length + ' total rows)' : ''}
+Here is the complete CSV data:
+${JSON.stringify(csvData.slice(0, 1000))}${csvData.length > 1000 ? '\n... (showing first 1000 rows of ' + csvData.length + ' total rows)' : ''}
 
 User question: ${message}
 
