@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, Trash2, Shield } from "lucide-react";
+import { Send, Bot, User, Trash2, Shield, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { validateChatMessage } from "@/utils/validation";
+import { TypingIndicator } from "@/components/ui/typing-indicator";
 
 interface AIChatProps {
   bundle: any;
@@ -211,12 +212,20 @@ export default function AIChat({ bundle, csvData }: AIChatProps) {
                   ))}
                   
                   {loading && (
-                    <div className="flex items-start space-x-3">
-                      <div className="bg-amber-100 rounded-full p-2">
+                    <div className="flex items-start space-x-3 animate-fade-in">
+                      <div className="bg-amber-100 rounded-full p-2 relative">
                         <Bot className="h-4 w-4 text-amber-600" />
+                        <div className="absolute -top-1 -right-1">
+                          <Sparkles className="h-3 w-3 text-amber-500 animate-pulse" />
+                        </div>
                       </div>
-                      <div className="bg-amber-50 rounded-lg p-3 shadow-sm">
-                        <p className="text-amber-600">Thinking...</p>
+                      <div className="bg-amber-50 rounded-lg p-3 shadow-sm border border-amber-200/50 animate-scale-in">
+                        <TypingIndicator className="text-amber-600" />
+                        <div className="mt-2 space-y-1">
+                          <div className="w-32 h-2 bg-amber-200/50 rounded animate-pulse" />
+                          <div className="w-24 h-2 bg-amber-200/30 rounded animate-pulse" style={{ animationDelay: '200ms' }} />
+                          <div className="w-28 h-2 bg-amber-200/40 rounded animate-pulse" style={{ animationDelay: '400ms' }} />
+                        </div>
                       </div>
                     </div>
                   )}
