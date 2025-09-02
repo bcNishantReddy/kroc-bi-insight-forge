@@ -8,7 +8,7 @@ export default function Pricing() {
   const plans = [
     {
       name: "Free",
-      price: "$0",
+      price: "₹0",
       period: "forever",
       icon: CreditCard,
       description: "Perfect for getting started with data analysis",
@@ -29,7 +29,7 @@ export default function Pricing() {
     },
     {
       name: "Pro",
-      price: "$19",
+      price: "₹19",
       period: "per month",
       icon: Zap,
       description: "For professionals who need advanced features",
@@ -50,7 +50,7 @@ export default function Pricing() {
     },
     {
       name: "Enterprise",
-      price: "$99",
+      price: "₹99",
       period: "per month",
       icon: Crown,
       description: "For teams and organizations with advanced needs",
