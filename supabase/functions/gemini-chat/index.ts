@@ -16,6 +16,25 @@ serve(async (req) => {
   try {
     const { message, csvData, bundleInfo } = await req.json()
 
+    // Optimize data for API limits - sample data intelligently
+    const sampleSize = Math.min(50, csvData.length) // Max 50 rows
+    const sampledData = csvData.length > sampleSize 
+      ? csvData.slice(0, Math.floor(sampleSize/2))
+          .concat(csvData.slice(-Math.floor(sampleSize/2))) // First and last rows
+      : csvData
+
+    // Create data summary for context
+    const dataSummary = {
+      totalRows: csvData.length,
+      columns: Object.keys(csvData[0] || {}),
+      sampleRows: sampledData.length,
+      dataTypes: Object.keys(csvData[0] || {}).reduce((acc, key) => {
+        const sampleValues = csvData.slice(0, 10).map(row => row[key]).filter(v => v !== null && v !== undefined && v !== '')
+        acc[key] = typeof sampleValues[0]
+        return acc
+      }, {} as Record<string, string>)
+    }
+
     // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -60,12 +79,17 @@ serve(async (req) => {
           messages: [
             {
               role: 'system',
-              content: `You are a data analysis expert. You are analyzing a CSV dataset called "${bundleInfo.name}" with ${bundleInfo.totalRows} rows and the following columns: ${bundleInfo.columns.join(', ')}. 
+              content: `You are a data analysis expert. You are analyzing a CSV dataset called "${bundleInfo.name}" with ${dataSummary.totalRows} total rows and ${dataSummary.columns.length} columns.
 
-The user has provided you with the complete dataset. Analyze the data and provide insights, statistics, patterns, and answer questions about the data. Be specific and reference actual values from the data when possible.
+DATASET OVERVIEW:
+- Total rows: ${dataSummary.totalRows}
+- Columns: ${dataSummary.columns.join(', ')}
+- Data types: ${JSON.stringify(dataSummary.dataTypes, null, 2)}
 
-Here is the complete CSV data:
-${JSON.stringify(csvData)}`
+SAMPLE DATA (${dataSummary.sampleRows} representative rows from ${dataSummary.totalRows} total):
+${JSON.stringify(sampledData, null, 2)}
+
+Analyze this data and provide insights. When referencing statistics, extrapolate from the sample to the full dataset size of ${dataSummary.totalRows} rows.`
             },
             {
               role: 'user',
@@ -90,16 +114,19 @@ ${JSON.stringify(csvData)}`
         throw new Error('Gemini API key not configured')
       }
 
-      const prompt = `You are a data analysis expert. You are analyzing a CSV dataset called "${bundleInfo.name}" with ${bundleInfo.totalRows} rows and the following columns: ${bundleInfo.columns.join(', ')}.
+      const prompt = `You are a data analysis expert. You are analyzing a CSV dataset called "${bundleInfo.name}" with ${dataSummary.totalRows} total rows and ${dataSummary.columns.length} columns.
 
-The user has provided you with the complete dataset. Analyze the data and provide insights, statistics, patterns, and answer questions about the data. Be specific and reference actual values from the data when possible.
+DATASET OVERVIEW:
+- Total rows: ${dataSummary.totalRows}
+- Columns: ${dataSummary.columns.join(', ')}
+- Data types: ${JSON.stringify(dataSummary.dataTypes, null, 2)}
 
-Here is the complete CSV data:
-${JSON.stringify(csvData)}
+SAMPLE DATA (${dataSummary.sampleRows} representative rows from ${dataSummary.totalRows} total):
+${JSON.stringify(sampledData, null, 2)}
 
 User question: ${message}
 
-Please provide a helpful, detailed analysis based on the actual data provided.`
+Please analyze this sample data and provide insights that can be extrapolated to the full dataset of ${dataSummary.totalRows} rows. Be specific about patterns, statistics, and trends you observe.`
 
       const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
         method: 'POST',
@@ -128,7 +155,13 @@ Please provide a helpful, detailed analysis based on the actual data provided.`
       if (!geminiResponse.ok) {
         const errorText = await geminiResponse.text()
         console.error('Gemini API error:', errorText)
-        throw new Error('Gemini API error: ' + errorText)
+        
+        // Handle quota exceeded error specifically
+        if (errorText.includes('429') || errorText.includes('quota')) {
+          throw new Error('AI service temporarily unavailable due to high usage. Please try again in a few moments.')
+        }
+        
+        throw new Error('AI service error: ' + errorText)
       }
 
       const geminiData = await geminiResponse.json()
